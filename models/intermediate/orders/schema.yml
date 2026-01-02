@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: int_orders__with_customer
+    description: 注文データに顧客情報と国情報を結合した中間モデル。注文に関する充実したコンテキストを提供する
+    columns:
+      - name: order_key
+        description: 各注文の一意な識別子。主キーとして機能する
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_tpch__orders')
+              field: order_key
+
+      - name: customer_key
+        description: 注文を発注した顧客への外部キー参照
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_tpch__customer')
+              field: customer_key
+
+      - name: order_status
+        description: 注文の現在のステータス（F=完了、O=進行中、P=保留中）
+
+      - name: total_price
+        description: すべての明細を含む注文の合計金額
+
+      - name: order_date
+        description: 顧客が注文を発注した日付
+
+      - name: order_priority
+        description: 注文の処理に割り当てられた優先度レベル
+
+      - name: clerk
+        description: 注文を処理した、または処理中の担当者の識別子
+
+      - name: ship_priority
+        description: 配送の緊急度を示す配送優先度レベル
+
+      - name: order_comment
+        description: 注文に関する自由記述のメモまたは追加情報
+
+      - name: customer_name
+        description: 注文を発注した顧客の氏名
+
+      - name: market_segment
+        description: 顧客の市場セグメント区分（例：AUTOMOBILE、BUILDING、FURNITURE、MACHINERY、HOUSEHOLD）
+
+      - name: account_balance
+        description: システムの基準通貨での顧客の現在の口座残高
+
+      - name: nation_name
+        description: 顧客が所在する国または国家の名称
+
+      - name: region_key
+        description: 顧客の国が所属する地域への外部キー参照
+        data_tests:
+          - relationships:
+              to: ref('stg_tpch__region')
+              field: region_key

@@ -1,0 +1,29 @@
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (重要)
+profiles.yml  # ローカルの接続情報は共有しない
+.env
+*.p8  # 秘密鍵
+EOF

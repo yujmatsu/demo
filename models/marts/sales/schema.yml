@@ -1,0 +1,265 @@
+version: 2
+
+models:
+  - name: fct_customer_orders
+    description: 顧客ごとの注文指標と顧客生涯価値を集計したファクトテーブル
+    tags:
+      - mart
+      - sales_domain
+      - tier_1
+      - production
+    meta:
+      owner: Data Engineering Team
+      contact: data-eng@example.com
+      tier: tier_1  # データ品質レベル（tier_1 = 本番重要データ）
+      pii: false    # 個人識別情報を含まない
+      retention_days: 730  # 2年間保持
+      sla:
+        freshness: 1d  # 1日以内に更新
+        accuracy: 99.9%  # 99.9%の精度を保証
+      tags:
+        - customer_analytics
+        - ltv
+        - production
+    columns:
+      - name: customer_key
+        description: 各顧客の一意な識別子。主キーとして機能する
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_tpch__customer')
+              field: customer_key
+
+      - name: customer_name
+        description: 顧客の氏名
+
+      - name: market_segment
+        description: 顧客の市場セグメント区分（例：AUTOMOBILE、BUILDING、FURNITURE、MACHINERY、HOUSEHOLD）
+
+      - name: nation_name
+        description: 顧客が所在する国または国家の名称
+
+      - name: total_orders
+        description: 顧客が発注した注文の総件数
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+
+      - name: total_revenue
+        description: 顧客が発注したすべての注文の合計金額（生涯価値）
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+      - name: avg_order_value
+        description: 顧客の1注文あたりの平均金額
+
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+      - name: first_order_date
+        description: 顧客の最初の注文日
+        data_tests:
+          - not_null
+
+      - name: last_order_date
+        description: 顧客の最新の注文日
+        data_tests:
+          - not_null
+
+      - name: customer_lifetime_days
+        description: 顧客の最初の注文から最後の注文までの日数（注文が1件のみの場合は0）
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+  - name: fct_part_sales
+    description: |
+      商品・部品別の売上サマリーを集計したファクトテーブル。
+
+      ■ ビジネス概要：
+      - 各商品の販売実績を数量・金額・注文数で集計
+      - 割引・税込みの最終売上金額を算出
+      - 商品分析、在庫計画、価格戦略に活用
+
+      ■ 集計粒度：
+      - part_key（商品キー）単位の集計
+      - 全期間の累計値
+    columns:
+      - name: part_key
+        description: |
+          **商品キー** - 各商品・部品の一意識別子（主キー）
+
+          - **型**: NUMBER
+          - **NULL**: 不可
+          - **備考**: stg_tpch__part への外部キー
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_tpch__part')
+              field: part_key
+
+      - name: part_name
+        description: |
+          **商品名** - 商品・部品の名称
+
+          - **備考**: stg_tpch__part から取得
+        data_tests:
+          - not_null
+
+      - name: manufacturer
+        description: |
+          **製造者** - 商品の製造者・メーカー名
+
+          - **備考**: stg_tpch__part から取得
+
+      - name: brand
+        description: |
+          **ブランド** - 商品のブランド名
+
+          - **備考**: stg_tpch__part から取得
+
+      - name: part_type
+        description: |
+          **商品タイプ** - 商品のカテゴリ・タイプ
+
+          - **備考**: stg_tpch__part から取得
+
+      - name: size
+        description: |
+          **サイズ** - 商品のサイズ
+
+          - **備考**: stg_tpch__part から取得
+
+      - name: retail_price
+        description: |
+          **小売価格** - 商品の標準小売価格（USD）
+
+          - **備考**: stg_tpch__part から取得
+          - **注意**: 実際の販売価格とは異なる場合がある
+        data_tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+      - name: total_quantity
+        description: |
+          **総販売数量** - この商品の累計販売数量
+
+          ■ 計算式：
+          ```sql
+          sum(quantity)
+          ```
+
+          - **単位**: 商品マスタに依存（個、kg、リットルなど）
+          - **範囲**: 0以上
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+
+      - name: total_revenue
+        description: |
+          **総売上金額** - この商品の累計売上金額（割引後・税込み）
+
+          ■ 計算式：
+          ```sql
+          sum(extended_price * (1 - discount) * (1 + tax))
+          ```
+
+          - **内訳**:
+            - extended_price: 数量 × 単価（割引前）
+            - (1 - discount): 割引適用
+            - (1 + tax): 税適用
+
+          - **単位**: USD
+          - **範囲**: 0以上
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "> 0"
+
+      - name: avg_unit_price
+        description: |
+          **平均単価** - この商品の1個あたりの平均販売価格（割引後・税込み）
+
+          ■ 計算式：
+          ```sql
+          total_revenue / nullif(total_quantity, 0)
+          ```
+
+          - **注意**: ゼロ除算を回避するため nullif を使用
+          - **単位**: USD/個（または商品の単位）
+          - **範囲**: 0以上（通常は正の値）
+        data_tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 or avg_unit_price is null"
+
+      - name: total_orders
+        description: |
+          **総注文数** - この商品が含まれる注文の総数（ユニーク）
+
+          ■ 計算式：
+          ```sql
+          count(distinct order_key)
+          ```
+
+          - **範囲**: 1以上（販売実績がある商品のみ）
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 1"
+
+      - name: total_revenue_before_discount
+        description: |
+          **割引前売上金額** - 割引適用前の売上金額（参考指標）
+
+          ■ 計算式：
+          ```sql
+          sum(extended_price)
+          ```
+
+          - **単位**: USD
+          - **用途**: 割引率の分析、価格戦略の検討
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+      - name: avg_discount_rate
+        description: |
+          **平均割引率** - この商品の明細行の平均割引率（参考指標）
+
+          ■ 計算式：
+          ```sql
+          avg(discount)
+          ```
+
+          - **範囲**: 0.00〜1.00（0% 〜 100%）
+          - **用途**: プロモーション効果の分析
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and avg_discount_rate <= 1"
+
+      - name: avg_tax_rate
+        description: |
+          **平均税率** - この商品の明細行の平均税率（参考指標）
+
+          ■ 計算式：
+          ```sql
+          avg(tax)
+          ```
+
+          - **範囲**: 0.00〜1.00（0% 〜 100%）
+          - **用途**: 税負担の分析、価格設定
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0 and avg_tax_rate <= 1"

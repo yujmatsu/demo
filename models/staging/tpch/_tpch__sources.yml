@@ -1,0 +1,129 @@
+version: 2
+
+sources:
+  - name: tpch
+    database: snowflake_sample_data
+    schema: tpch_sf1
+    description: SnowflakeのTPC-Hベンチマークサンプルデータセット
+    tables:
+      - name: customer
+        description: 顧客情報を格納する顧客ディメンションテーブル
+        columns:
+          - name: c_custkey
+            description: 各顧客の一意な識別子
+          - name: c_name
+            description: 顧客名
+          - name: c_address
+            description: 顧客の住所
+          - name: c_nationkey
+            description: 国テーブルへの外部キー
+          - name: c_phone
+            description: 顧客の電話番号
+          - name: c_acctbal
+            description: 顧客の口座残高
+          - name: c_mktsegment
+            description: 市場セグメント区分
+          - name: c_comment
+            description: 顧客に関するコメントまたは備考
+
+      - name: nation
+        description: 国情報を格納する国ディメンションテーブル
+        columns:
+          - name: n_nationkey
+            description: 各国の一意な識別子
+          - name: n_name
+            description: 国名
+          - name: n_regionkey
+            description: 地域テーブルへの外部キー
+          - name: n_comment
+            description: 国に関するコメント
+
+      - name: region
+        description: 地理的地域を格納する地域ディメンションテーブル
+        columns:
+          - name: r_regionkey
+            description: 各地域の一意な識別子
+          - name: r_name
+            description: 地域名
+          - name: r_comment
+            description: 地域に関するコメント
+
+      - name: orders
+        description: 注文トランザクションを格納する注文ファクトテーブル
+        columns:
+          - name: o_orderkey
+            description: 各注文の一意な識別子
+          - name: o_custkey
+            description: 顧客テーブルへの外部キー
+          - name: o_orderstatus
+            description: 注文のステータス（F=完了、O=オープン、P=保留中）
+          - name: o_totalprice
+            description: 注文の合計金額
+          - name: o_orderdate
+            description: 注文が発注された日付
+          - name: o_orderpriority
+            description: 注文の優先度
+          - name: o_clerk
+            description: 注文を処理した担当者
+          - name: o_shippriority
+            description: 配送優先度レベル
+          - name: o_comment
+            description: 注文に関するコメント
+
+      - name: lineitem
+        description: 注文内の個別品目を格納する明細ファクトテーブル
+        columns:
+          - name: l_orderkey
+            description: 注文テーブルへの外部キー
+          - name: l_partkey
+            description: 部品テーブルへの外部キー
+          - name: l_suppkey
+            description: サプライヤーテーブルへの外部キー
+          - name: l_linenumber
+            description: 注文内の明細行番号
+          - name: l_quantity
+            description: 品目の数量
+          - name: l_extendedprice
+            description: 拡張価格（数量×単価）
+          - name: l_discount
+            description: 割引率
+          - name: l_tax
+            description: 税率
+          - name: l_returnflag
+            description: 返品フラグ（R=返品済、A=受入済）
+          - name: l_linestatus
+            description: 明細ステータス（O=オープン、F=完了）
+          - name: l_shipdate
+            description: 品目が出荷された日付
+          - name: l_commitdate
+            description: 納品確約日
+          - name: l_receiptdate
+            description: 品目が受領された日付
+          - name: l_shipinstruct
+            description: 配送指示
+          - name: l_shipmode
+            description: 配送方法
+          - name: l_comment
+            description: 明細に関するコメント
+
+      - name: part
+        description: 商品・部品情報を格納する部品ディメンションテーブル
+        columns:
+          - name: p_partkey
+            description: 各部品の一意な識別子
+          - name: p_name
+            description: 部品名
+          - name: p_mfgr
+            description: 製造者・メーカー
+          - name: p_brand
+            description: ブランド名
+          - name: p_type
+            description: 部品のタイプ・カテゴリ
+          - name: p_size
+            description: 部品のサイズ
+          - name: p_container
+            description: コンテナ・包装タイプ
+          - name: p_retailprice
+            description: 小売価格
+          - name: p_comment
+            description: 部品に関するコメント

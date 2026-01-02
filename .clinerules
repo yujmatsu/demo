@@ -1,0 +1,79 @@
+# .clinerules
+
+## ⚠️ 最優先ルール - 言語設定
+
+**このルールは他のすべてのルールより優先されます。**
+
+- すべてのdescription（説明文）は**必ず日本語で記述**
+- すべてのコメントは**必ず日本語で記述**
+- schema.ymlのdescriptionは**必ず日本語で記述**
+- ビジネス用語は**必ず日本語で記述**（例：「顧客キー」「注文日」「市場セグメント」）
+- 英語での記述は**絶対に避ける**
+
+**良い例**:
+description: |
+  顧客マスタテーブル
+  15万件の顧客情報を含む
+columns:
+  - name: customer_key
+    description: 顧客キー（主キー）
+
+**悪い例（絶対に避ける）**:
+description: Customer dimension table containing customer information
+columns:
+  - name: customer_key
+    description: Unique identifier for each customer
+
+## dbtプロジェクトルール
+
+このプロジェクトはdbt（Data Build Tool）プロジェクトです。
+以下の規約に従ってコードを生成してください。
+
+### モデル作成時の規約
+
+- モデルファイル名は必ず **小文字スネークケース**（例：`stg_tpch__customer.sql`）
+- ステージングモデルは **`stg_`** プレフィックス
+- 中間モデルは **`int_`** プレフィックス
+- マートモデルはプレフィックスなし（例：`fct_customer_orders.sql`）
+- すべてのモデルに **`description`** を記述
+- カラム名は **小文字スネークケース** に統一
+
+### SQL記述規約
+
+- **CTE（Common Table Expression）** を積極的に使用
+- 最終SELECTは明示的にカラムを列挙（`SELECT *` は避ける）
+- JOINはすべて明示的に記述（`INNER JOIN`, `LEFT JOIN`, `RIGHT JOIN`）
+- WHERE句、GROUP BY句は可読性を優先してインデント
+
+### テスト規約
+
+- 主キー（PK）には **`unique`** と **`not_null`** を必須
+- 外部キー（FK）には **`relationships`** を追加
+- ビジネス上重要なカラムには **`not_null`** を追加
+- 値の範囲チェックが必要な場合は **`accepted_values`** または **`dbt_utils.accepted_range`**
+
+### schema.yml記述規約
+
+- すべてのモデルに `description` を記述（**日本語で記述**）
+- すべてのカラムに `description` を記述（**日本語で**ビジネス的な意味を含める）
+- テストは `tests:` セクションに記述
+- descriptionには以下を含める：
+  - データの概要（日本語）
+  - ビジネス上の用途（日本語）
+  - 元のカラム名（英語）やデータ型などの技術情報
+
+### ファイル配置規約
+
+- ステージングモデル：`models/staging/<source_name>/`
+- 中間モデル：`models/intermediate/<domain>/`
+- マートモデル：`models/marts/<domain>/`
+- テスト：`tests/`
+- マクロ：`macros/`
+
+### 命名規約
+
+- ソース：`<source_name>`（例：`tpch`）
+- ステージングモデル：`stg_<source_name>__<table_name>`（例：`stg_tpch__customer`）
+- 中間モデル：`int_<domain>__<description>`（例：`int_orders__with_customer`）
+- ファクトテーブル：`fct_<business_process>`（例：`fct_customer_orders`）
+- ディメンションテーブル：`dim_<entity>`（例：`dim_customer`）

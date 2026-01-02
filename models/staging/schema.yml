@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "顧客データ（staging）"
+    columns:
+      - name: customer_id
+        description: "顧客ID（PK）"
+        data_tests:
+          - not_null
+          - unique
+
+  - name: stg_orders
+    description: "注文データ（staging）"
+    columns:
+      - name: order_id
+        description: "注文ID（PK）"
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "顧客ID（FK）"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id

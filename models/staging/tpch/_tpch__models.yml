@@ -1,0 +1,344 @@
+version: 2
+
+models:
+  - name: stg_tpch__customer
+    description: TPC-H顧客データを標準化したカラム名で提供するステージングモデル
+    tags:
+      - staging
+      - tpch
+      - customer_domain
+    columns:
+      - name: customer_key
+        description: 各顧客の一意な識別子。主キーとして機能する
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_name
+        description: システムに登録されている顧客の氏名
+
+      - name: address
+        description: 顧客の郵送先住所
+
+      - name: nation_key
+        description: 顧客が所在する国への外部キー参照
+        data_tests:
+          - relationships:
+              to: ref('stg_tpch__nation')
+              field: nation_key
+
+      - name: phone
+        description: 顧客の主要連絡先電話番号
+
+      - name: account_balance
+        description: システムの基準通貨での顧客の現在の口座残高
+
+      - name: market_segment
+        description: 顧客の分類とターゲティングに使用される市場セグメント区分（例：AUTOMOBILE、BUILDING、FURNITURE、MACHINERY、HOUSEHOLD）
+
+      - name: comment
+        description: 顧客に関する自由記述のメモまたは追加情報
+
+  - name: stg_tpch__nation
+    description: TPC-H国データを標準化したカラム名で提供するステージングモデル
+    columns:
+      - name: nation_key
+        description: 各国の一意な識別子。主キーとして機能する
+        data_tests:
+          - unique
+          - not_null
+
+      - name: nation_name
+        description: 国または国家の名称
+
+      - name: region_key
+        description: 国が所属する地域への外部キー参照
+        data_tests:
+          - relationships:
+              to: ref('stg_tpch__region')
+              field: region_key
+
+      - name: comment
+        description: 国に関する自由記述のメモまたは追加情報
+
+  - name: stg_tpch__region
+    description: TPC-H地域データを標準化したカラム名で提供するステージングモデル
+    columns:
+      - name: region_key
+        description: 各地域の一意な識別子。主キーとして機能する
+        data_tests:
+          - unique
+          - not_null
+
+      - name: region_name
+        description: 地理的地域の名称
+
+      - name: comment
+        description: 地域に関する自由記述のメモまたは追加情報
+
+  - name: stg_tpch__orders
+    description: TPC-H注文データを標準化したカラム名で提供するステージングモデル
+    tags:
+      - staging
+      - tpch
+      - sales_domain
+    columns:
+      - name: order_key
+        description: 各注文の一意な識別子。主キーとして機能する
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_key
+        description: 注文を発注した顧客への外部キー参照
+        data_tests:
+          - relationships:
+              to: ref('stg_tpch__customer')
+              field: customer_key
+
+      - name: order_status
+        description: 注文の現在のステータス（F=完了、O=進行中、P=保留中）
+
+      - name: total_price
+        description: すべての明細を含む注文の合計金額
+
+      - name: order_date
+        description: 顧客が注文を発注した日付
+
+      - name: order_priority
+        description: 注文の処理に割り当てられた優先度レベル
+
+      - name: clerk
+        description: 注文を処理した、または処理中の担当者の識別子
+
+      - name: ship_priority
+        description: 配送の緊急度を示す配送優先度レベル
+
+      - name: comment
+        description: 注文に関する自由記述のメモまたは追加情報
+
+  - name: stg_tpch__lineitem
+    description: |
+      TPC-H注文明細データを標準化したカラム名で提供するステージングモデル。
+
+      ■ ビジネス概要：
+      - 1つの注文（ORDERS）に対して複数の明細行（LINEITEM）が紐づく
+      - 各明細は個別の商品/部品（PART）と数量、価格、割引、税、配送情報を保持
+      - 複合主キー：order_key + line_number
+
+      ■ 価格計算の関係：
+      - extended_price = quantity × 商品単価（割引・税適用前）
+      - 割引後価格 = extended_price × (1 - discount)
+      - 最終価格 = 割引後価格 × (1 + tax)
+    columns:
+      - name: order_key
+        description: |
+          この明細が属する注文への外部キー参照（FK → stg_tpch__orders）。
+          line_number と組み合わせて複合主キーを構成する。
+
+          ■ 注意点：
+          - 1つの注文に複数の明細が紐づくため、このカラム単体ではユニークではない
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_tpch__orders')
+              field: order_key
+
+      - name: part_key
+        description: |
+          この明細で注文された部品・製品（PART）への外部キー参照。
+
+          ■ 注意点：
+          - 商品マスタと結合して商品名、カテゴリ、メーカー等を取得可能
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_tpch__part')
+              field: part_key
+
+      - name: supplier_key
+        description: |
+          この部品を供給するサプライヤー（SUPPLIER）への外部キー参照。
+
+          ■ 注意点：
+          - 同じ部品でも明細ごとに異なるサプライヤーが割り当てられる可能性がある
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_tpch__supplier')
+              field: supplier_key
+
+      - name: line_number
+        description: |
+          注文内での明細行番号（連番）。order_key と組み合わせて複合主キーを構成する。
+
+          ■ 注意点：
+          - 各注文内で 1 から始まる連番（1, 2, 3, ...）
+          - 注文全体でユニークではなく、order_key ごとにユニーク
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+
+      - name: quantity
+        description: |
+          この明細で注文された部品の数量。
+
+          ■ 注意点：
+          - 単位は部品マスタに依存（個、kg、リットルなど）
+          - 通常は正の整数または小数
+          - extended_price の計算に使用される（quantity × 単価）
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+
+      - name: extended_price
+        description: |
+          数量 × 商品単価で計算された拡張価格（割引・税適用前）。
+
+          ■ 計算式：
+          - extended_price = quantity × 商品単価
+
+          ■ 注意点：
+          - 割引や税を適用する前の金額
+          - 割引後価格は extended_price × (1 - discount) で計算
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+
+      - name: discount
+        description: |
+          この明細に適用される割引率（0.00〜1.00の範囲）。
+
+          ■ 値の意味：
+          - 0.00 = 割引なし（定価）
+          - 0.10 = 10%割引
+          - 1.00 = 100%割引（無料）
+
+          ■ 注意点：
+          - パーセンテージではなく小数で格納（例：10%割引 = 0.10）
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+
+      - name: tax
+        description: |
+          この明細に適用される税率（0.00〜1.00の範囲）。
+
+          ■ 値の意味：
+          - 0.00 = 非課税
+          - 0.08 = 8%の税（例：消費税8%）
+          - 0.10 = 10%の税
+
+          ■ 注意点：
+          - パーセンテージではなく小数で格納（例：10%税 = 0.10）
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+
+      - name: return_flag
+        description: |
+          品目の返品/受領状態を示すフラグ。
+
+          ■ 取りうる値：
+          - 'R' = Return（返品済み）
+          - 'A' = Accepted（受領済み）
+          - 'N' = Not shipped（未配送）
+
+          ■ 注意点：
+          - ship_date との関係で状態が変化
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['R', 'A', 'N']
+
+      - name: line_status
+        description: |
+          明細行の処理ステータス。
+
+          ■ 取りうる値：
+          - 'O' = Open（未処理・進行中）
+          - 'F' = Finished（処理完了）
+
+          ■ 注意点：
+          - 配送完了や受領と連動して 'F' に更新される
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['O', 'F']
+
+      - name: ship_date
+        description: |
+          明細が顧客に出荷された日付。
+
+          ■ 注意点：
+          - commit_date（約束日）以前に出荷されるのが理想
+          - receipt_date（受領日）以前である必要がある
+          - 未出荷の場合は NULL の可能性あり
+
+      - name: commit_date
+        description: |
+          顧客に約束された納品確約日（コミット日）。
+
+          ■ 注意点：
+          - 注文時に顧客と合意した納期
+          - ship_date がこれを超過すると納期遅延と判断される
+          - 必須カラム（NULL不可）
+        data_tests:
+          - not_null
+
+      - name: receipt_date
+        description: |
+          明細が顧客に受領された日付。
+
+          ■ 注意点：
+          - ship_date 以降である必要がある（出荷後に受領）
+          - この日付が確定すると return_flag が 'A' (Accepted) になる
+          - 未受領の場合は NULL の可能性あり
+
+      - name: ship_instruct
+        description: |
+          明細の取り扱いと配送に関する配送指示。
+
+          ■ 例：
+          - "DELIVER IN PERSON"（手渡し配送）
+          - "COLLECT COD"（代金引換）
+          - "NONE"（特になし）
+
+          ■ 注意点：
+          - 配送業者への特別な指示や要望を記録
+          - 標準化された値セットが存在する場合がある
+
+      - name: ship_mode
+        description: |
+          配送に使用された配送方法または配送モード。
+
+          ■ 例：
+          - "AIR"（航空便）
+          - "TRUCK"（トラック便）
+          - "MAIL"（郵便）
+          - "SHIP"（船便）
+          - "RAIL"（鉄道）
+
+          ■ 注意点：
+          - 配送コストや配送期間の分析に使用
+          - 標準化された値セットが存在する場合がある
+
+      - name: comment
+        description: |
+          明細に関する自由記述のメモまたは追加情報。
+
+          ■ 注意点：
+          - 定型化されていない任意のテキスト
+          - 特記事項、顧客要望、内部メモなどを記録
+
+    data_tests:
+      # 複合主キーのユニーク性テスト
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_key
+            - line_number

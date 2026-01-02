@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: mart_customer_orders
+    description: "顧客別注文集計（完了注文のみ）"
+    columns:
+      - name: customer_id
+        description: "顧客ID（PK）"
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_name
+        description: "顧客名"
+        data_tests:
+          - not_null
+
+      - name: region
+        description: "地域"
+        data_tests:
+          - not_null
+          - accepted_values:
+
+              values: ['東京', '大阪', '福岡', '名古屋', '札幌']
+
+      - name: order_count
+        description: "注文件数"
+        data_tests:
+          - not_null
+
+      - name: total_amount
+        description: "合計金額"
+        data_tests:
+          - not_null
+
+      - name: avg_amount
+        description: "平均金額"

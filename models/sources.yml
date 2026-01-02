@@ -1,0 +1,34 @@
+version: 2
+
+sources:
+  - name: raw_data
+    description: "生データ（Snowflakeの元テーブル）"
+    database: chipmunk_fund_db
+    schema: PUBLIC
+    tables:
+
+      - name: raw_customers
+        description: "顧客データ（生）"
+        columns:
+          - name: customer_id
+            description: "顧客ID"
+          - name: customer_name
+            description: "顧客名"
+          - name: email
+            description: "メールアドレス"
+          - name: region
+            description: "地域"
+
+      - name: raw_orders
+        description: "注文データ（生）"
+        columns:
+          - name: order_id
+            description: "注文ID"
+          - name: customer_id
+            description: "顧客ID（FK）"
+          - name: order_date
+            description: "注文日"
+          - name: amount
+            description: "注文金額"
+          - name: status
+            description: "注文ステータス"
