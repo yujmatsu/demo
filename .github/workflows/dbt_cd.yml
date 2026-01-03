@@ -66,13 +66,25 @@ jobs:
       - name: Deploy (dbt build)
         id: dbt_build
         run: |
+          # フルビルド（全モデル・全テストを実行）
           dbt build --target prod
 
       - name: Post-deployment verification
+        if: success()
         run: |
-          echo "Deployment completed at $(date)"
-          echo "Commit: $GITHUB_SHA"
-          echo "Actor : $GITHUB_ACTOR"
+          echo "✅ Deployment completed successfully at $(date)"
+          echo "📦 Commit: $GITHUB_SHA"
+          echo "👤 Actor: $GITHUB_ACTOR"
+          echo "🎯 Target: prod"
+          echo "🗄️  Database: $SNOWFLAKE_DATABASE"
+
+      - name: Deployment failed
+        if: failure()
+        run: |
+          echo "❌ Deployment failed at $(date)"
+          echo "📦 Commit: $GITHUB_SHA"
+          echo "👤 Actor: $GITHUB_ACTOR"
+          exit 1
 
       - name: Clean up private key
         if: always()
