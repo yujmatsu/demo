@@ -68,7 +68,8 @@ jobs:
       - name: Generate state manifest from main branch
         run: |
           cd main-branch
-          cp profiles.yml.template profiles.yml
+          # Use profiles.yml.template from current branch (not main)
+          cp ../profiles.yml.template profiles.yml
           cp ../rsa_key.p8 ./rsa_key.p8
           dbt deps
           dbt parse --target prod
