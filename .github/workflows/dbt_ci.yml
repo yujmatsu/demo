@@ -1,0 +1,122 @@
+name: dbt CI (PR Verification)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "models/**"
+      - "tests/**"
+      - "macros/**"
+      - "seeds/**"
+      - "snapshots/**"
+      - "dbt_project.yml"
+      - "packages.yml"
+      - "profiles.yml.template"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: dbt-ci-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROFILES_DIR: .
+      DBT_SCHEMA: DBT_PR_${{ github.event.pull_request.number }}
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      # profiles.yml.template のデフォルトに合わせる
+      SNOWFLAKE_PRIVATE_KEY_PATH: /home/yujmatsu/my_dbt_project/demo/rsa_key.p8
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Checkout main branch for state comparison
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-branch
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dbt (pin recommended)
+        run: |
+          pip install --upgrade pip
+          pip install "dbt-core==1.8.*" "dbt-snowflake==1.8.*"
+
+      - name: Create profiles.yml from template
+        run: cp profiles.yml.template profiles.yml
+
+      - name: Setup Snowflake private key
+        run: |
+          printf "%s" "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > /tmp/snowflake_key.p8
+          chmod 600 /tmp/snowflake_key.p8
+
+      - name: Install dbt packages (PR)
+        run: dbt deps
+
+      - name: Generate state manifest from main branch
+        run: |
+          cd main-branch
+          cp profiles.yml.template profiles.yml
+          dbt deps
+          dbt parse --target prod
+          cd ..
+          mkdir -p state
+          cp main-branch/target/manifest.json state/manifest.json
+
+      - name: Run dbt debug (optional but helpful)
+        run: dbt debug --target ci
+
+      - name: Create PR schema (optional)
+        run: |
+          dbt run-operation create_schema_if_not_exists             --args "{schema_name: ${{ env.DBT_SCHEMA }}}"             --target ci
+
+      - name: Run dbt build (Slim CI)
+        id: dbt_build
+        run: |
+          dbt build             --select state:modified+             --defer             --state state             --target ci
+
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const outcome = '${{ steps.dbt_build.outcome }}';
+            const emoji = outcome === 'success' ? '✅' : (outcome === 'cancelled' ? '⚪️' : '❌');
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `${emoji} **dbt CI (Slim CI): ${outcome}**`,
+              ``,
+              `- PR Schema: \`${process.env.DBT_SCHEMA}\``,
+              `- State: \`main\` の manifest を使用（--defer）`,
+              `- Logs: ${runUrl}`,
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+      - name: Clean up PR schema
+        if: always()
+        continue-on-error: true
+        run: |
+          dbt run-operation drop_schema_if_exists             --args "{schema_name: ${{ env.DBT_SCHEMA }}}"             --target ci
+
+      - name: Clean up private key
+        if: always()
+        run: rm -f /tmp/snowflake_key.p8 profiles.yml
