@@ -35,3 +35,20 @@ models:
 
       - name: avg_amount
         description: "平均金額"
+
+  - name: mart_order_summary
+    description: "日次の注文サマリ（注文数、顧客数、売上合計など）"
+    columns:
+      - name: order_date
+        description: "注文日"
+        tests:
+          - not_null
+          - unique
+      - name: total_orders
+        description: "注文数"
+        tests:
+          - not_null
+      - name: total_revenue
+        description: "売上合計"
+        tests:
+          - not_null

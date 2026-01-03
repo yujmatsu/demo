@@ -1,0 +1,91 @@
+name: dbt CD (Production Deployment)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "models/**"
+      - "tests/**"
+      - "macros/**"
+      - "seeds/**"
+      - "snapshots/**"
+      - "dbt_project.yml"
+      - "packages.yml"
+      - "profiles.yml.template"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dbt-cd-production
+  cancel-in-progress: false  # 本番はキャンセルせず順番に実行する想定
+
+jobs:
+  dbt-cd:
+    runs-on: ubuntu-latest
+
+    env:
+      DBT_PROFILES_DIR: .
+
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_PRIVATE_KEY_PATH: rsa_key.p8
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt (pin recommended)
+        run: |
+          pip install --upgrade pip
+          pip install "dbt-core==1.10.*" "dbt-snowflake==1.10.*"
+
+      - name: Create profiles.yml from template
+        run: cp profiles.yml.template profiles.yml
+
+      - name: Setup Snowflake private key
+        run: |
+          printf "%s" "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > rsa_key.p8
+          chmod 600 rsa_key.p8
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Pre-deployment check (compile)
+        run: dbt compile --target prod
+
+      - name: Deploy (dbt build)
+        id: dbt_build
+        run: |
+          # フルビルド（全モデル・全テストを実行）
+          dbt build --target prod
+
+      - name: Post-deployment verification
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully at $(date)"
+          echo "📦 Commit: $GITHUB_SHA"
+          echo "👤 Actor: $GITHUB_ACTOR"
+          echo "🎯 Target: prod"
+          echo "🗄️  Database: $SNOWFLAKE_DATABASE"
+
+      - name: Deployment failed
+        if: failure()
+        run: |
+          echo "❌ Deployment failed at $(date)"
+          echo "📦 Commit: $GITHUB_SHA"
+          echo "👤 Actor: $GITHUB_ACTOR"
+          exit 1
+
+      - name: Clean up private key
+        if: always()
+        run: rm -f rsa_key.p8 profiles.yml
