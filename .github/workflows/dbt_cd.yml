@@ -10,7 +10,7 @@ on:
       - "seeds/**"
       - "snapshots/**"
       - "dbt_project.yml"
-      - "dependencies.yml"
+      - "packages.yml"
       - "profiles.yml.template"
       - ".github/workflows/**"
 
@@ -47,7 +47,7 @@ jobs:
       - name: Install dbt (pin recommended)
         run: |
           pip install --upgrade pip
-          pip install "dbt-core==1.8.*" "dbt-snowflake==1.8.*"
+          pip install "dbt-core==1.10.*" "dbt-snowflake==1.10.*"
 
       - name: Create profiles.yml from template
         run: cp profiles.yml.template profiles.yml
