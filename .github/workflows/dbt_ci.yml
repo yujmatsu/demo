@@ -71,8 +71,9 @@ jobs:
           # Use profiles.yml.template from current branch (not main)
           cp ../profiles.yml.template profiles.yml
           cp ../rsa_key.p8 ./rsa_key.p8
+          export DBT_PROFILES_DIR=.
           dbt deps
-          dbt parse --target prod
+          dbt parse --target prod --profiles-dir .
           cd ..
           mkdir -p state
           cp main-branch/target/manifest.json state/manifest.json
