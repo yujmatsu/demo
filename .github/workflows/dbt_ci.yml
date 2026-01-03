@@ -10,7 +10,7 @@ on:
       - "seeds/**"
       - "snapshots/**"
       - "dbt_project.yml"
-      - "packages.yml"
+      - "dependencies.yml"
       - "profiles.yml.template"
       - ".github/workflows/**"
 
