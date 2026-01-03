@@ -69,6 +69,7 @@ jobs:
         run: |
           cd main-branch
           cp profiles.yml.template profiles.yml
+          cp ../rsa_key.p8 ./rsa_key.p8
           dbt deps
           dbt parse --target prod
           cd ..
