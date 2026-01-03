@@ -88,7 +88,7 @@ jobs:
       - name: Run dbt build (Slim CI)
         id: dbt_build
         run: |
-          dbt build             --select state:modified+             --defer             --state state             --target ci
+          dbt build             --select +state:modified+             --defer             --state state             --target ci
 
       - name: Comment PR with results
         if: always()
