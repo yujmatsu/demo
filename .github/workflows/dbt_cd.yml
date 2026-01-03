@@ -33,9 +33,7 @@ jobs:
       SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
       SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
       SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-
-      # profiles.yml.template のデフォルトに合わせる
-      SNOWFLAKE_PRIVATE_KEY_PATH: /home/yujmatsu/my_dbt_project/demo/rsa_key.p8
+      SNOWFLAKE_PRIVATE_KEY_PATH: rsa_key.p8
 
     steps:
       - name: Checkout code
@@ -56,8 +54,8 @@ jobs:
 
       - name: Setup Snowflake private key
         run: |
-          printf "%s" "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > /tmp/snowflake_key.p8
-          chmod 600 /tmp/snowflake_key.p8
+          printf "%s" "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > rsa_key.p8
+          chmod 600 rsa_key.p8
 
       - name: Install dbt packages
         run: dbt deps
@@ -78,4 +76,4 @@ jobs:
 
       - name: Clean up private key
         if: always()
-        run: rm -f /home/yujmatsu/my_dbt_project/demo/rsa_key.p8 profiles.yml
+        run: rm -f rsa_key.p8 profiles.yml
